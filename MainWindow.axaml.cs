@@ -1,10 +1,12 @@
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using JsonFormatter.ViewModels;
 using System;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace JsonFormatter;
@@ -13,6 +15,7 @@ public partial class MainWindow : Window
 {
     private readonly MainWindowViewModel _vm;
     private bool _updatingFromVm = false;
+    private bool _isBeautified = false;
 
     public MainWindow()
     {
@@ -34,6 +37,14 @@ public partial class MainWindow : Window
         if (_updatingFromVm) return;
         _vm.JsonText = Editor.Text ?? string.Empty;
         SyncStatus();
+        
+        // When user edits, switch back to TextBox mode
+        if (_isBeautified)
+        {
+            _isBeautified = false;
+            Editor.IsVisible = true;
+            HighlightedViewer.IsVisible = false;
+        }
     }
 
     private void SyncStatus()
@@ -42,15 +53,13 @@ public partial class MainWindow : Window
         bool formatted = _vm.IsJsonFormatted;
         string errMsg  = _vm.ValidationMessage ?? "";
 
-        ValidDot.Background         = new SolidColorBrush(Color.Parse(valid ? "#2D4A3E" : "#2D1B1B"));
-        ValidDotText.Text           = valid ? "✓" : "✗";
+        ValidDotText.Text           = valid ? "\uF05D" : "\uF52F";
         ValidDotText.Foreground     = new SolidColorBrush(Color.Parse(valid ? "#50FA7B" : "#FF5555"));
-        ValidLabel.Foreground       = new SolidColorBrush(Color.Parse(valid ? "#50FA7B" : "#6272A4"));
+        ValidLabel.Foreground       = new SolidColorBrush(Color.Parse("#CDD6F4"));
 
-        FormattedDot.Background     = new SolidColorBrush(Color.Parse(formatted ? "#3A2D4A" : "#2D1B1B"));
-        FormattedDotText.Text       = formatted ? "✓" : "✗";
-        FormattedDotText.Foreground = new SolidColorBrush(Color.Parse(formatted ? "#BD93F9" : "#FF5555"));
-        FormattedLabel.Foreground   = new SolidColorBrush(Color.Parse(formatted ? "#BD93F9" : "#6272A4"));
+        FormattedDotText.Text       = formatted ? "\uF05D" : "\uF52F";
+        FormattedDotText.Foreground = new SolidColorBrush(Color.Parse(formatted ? "#50FA7B" : "#FF5555"));
+        FormattedLabel.Foreground   = new SolidColorBrush(Color.Parse("#CDD6F4"));
 
         ErrorBar.IsVisible  = !valid && !string.IsNullOrEmpty(errMsg);
         ErrorText.Text      = errMsg;
@@ -66,10 +75,12 @@ public partial class MainWindow : Window
                 if (Editor.Text != _vm.JsonText)
                 {
                     _updatingFromVm = true;
+                    var caret = Editor.CaretIndex;
                     Editor.Text = _vm.JsonText;
+                    Editor.CaretIndex = Math.Min(caret, Editor.Text?.Length ?? 0);
                     _updatingFromVm = false;
                 }
-                SyncStatus();
+                UpdateHighlightedPreview();
             });
         }
 
@@ -89,6 +100,72 @@ public partial class MainWindow : Window
         }
     }
 
+    private void UpdateHighlightedPreview()
+    {
+        if (!_vm.IsJsonValid || string.IsNullOrWhiteSpace(_vm.JsonText))
+        {
+            HighlightedText.Inlines.Clear();
+            return;
+        }
+
+        var json = _vm.JsonText;
+        HighlightedText.Inlines.Clear();
+        
+        // Simple regex-based highlighting
+        var pattern = @"(""(?:[^""\\]|\\.)*"")|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|(true|false|null)|([{}\[\],:])";
+        var regex = new Regex(pattern);
+        
+        int lastPos = 0;
+        foreach (Match match in regex.Matches(json))
+        {
+            // Add text before this match (default color)
+            if (match.Index > lastPos)
+            {
+                var plainText = json.Substring(lastPos, match.Index - lastPos);
+                HighlightedText.Inlines.Add(new Run { Text = plainText, Foreground = new SolidColorBrush(Color.Parse("#CDD6F4")) });
+            }
+            
+            // Add highlighted match
+            var value = match.Value;
+            SolidColorBrush brush;
+            if (value.StartsWith("\"") && value.EndsWith("\""))
+            {
+                // String - yellow
+                brush = new SolidColorBrush(Color.Parse("#F1FA8C"));
+            }
+            else if (Regex.IsMatch(value, @"^-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$"))
+            {
+                // Number - purple
+                brush = new SolidColorBrush(Color.Parse("#BD93F9"));
+            }
+            else if (value is "true" or "false" or "null")
+            {
+                // Boolean/null - red
+                brush = new SolidColorBrush(Color.Parse("#FF5555"));
+            }
+            else if (value is "{" or "}" or "[" or "]")
+            {
+                // Brackets - light blue
+                brush = new SolidColorBrush(Color.Parse("#8BE9FD"));
+            }
+            else // comma or colon
+            {
+                // Comma/colon - white
+                brush = new SolidColorBrush(Color.Parse("#FFFFFF"));
+            }
+            
+            HighlightedText.Inlines.Add(new Run { Text = value, Foreground = brush });
+            lastPos = match.Index + match.Length;
+        }
+        
+        // Add remaining text
+        if (lastPos < json.Length)
+        {
+            var plainText = json.Substring(lastPos);
+            HighlightedText.Inlines.Add(new Run { Text = plainText, Foreground = new SolidColorBrush(Color.Parse("#CDD6F4")) });
+        }
+    }
+
     private void SyncNotification()
     {
         bool show    = _vm.ShowNotification;
@@ -97,16 +174,16 @@ public partial class MainWindow : Window
         NotificationBorder.IsVisible   = show;
         NotificationBorder.Background  = new SolidColorBrush(Color.Parse(success ? "#1E3A2D" : "#3A1E1E"));
         NotificationBorder.BorderBrush = new SolidColorBrush(Color.Parse(success ? "#50FA7B" : "#FF5555"));
-        NotifIcon.Text      = success ? "✓" : "✗";
+        NotifIcon.Text      = success ? "\uF05D" : "\uF52F";
         NotifIcon.Foreground = new SolidColorBrush(Color.Parse(success ? "#50FA7B" : "#FF5555"));
         NotifText.Text      = _vm.NotificationMessage ?? "";
     }
 
     private void BeautifyBtn_Click(object? sender, RoutedEventArgs e)
     {
-        if (!_vm.IsJsonValid)
+        if (string.IsNullOrWhiteSpace(_vm.JsonText))
         {
-            _ = _vm.ShowNotificationAsync("Fix JSON errors before beautifying.", false);
+            _ = _vm.ShowNotificationAsync("No JSON to beautify.", false);
             return;
         }
         _vm.BeautifyJson();
@@ -114,6 +191,13 @@ public partial class MainWindow : Window
         Editor.Text = _vm.JsonText;
         _updatingFromVm = false;
         SyncStatus();
+        
+        // Switch to highlighted view
+        _isBeautified = true;
+        Editor.IsVisible = false;
+        HighlightedViewer.IsVisible = true;
+        UpdateHighlightedPreview();
+        
         _ = _vm.ShowNotificationAsync("JSON beautified!", true);
     }
 
@@ -124,6 +208,12 @@ public partial class MainWindow : Window
         _updatingFromVm = false;
         _vm.JsonText = string.Empty;
         SyncStatus();
+        
+        // Reset to TextBox mode
+        _isBeautified = false;
+        Editor.IsVisible = true;
+        HighlightedViewer.IsVisible = false;
+        HighlightedText.Text = "";
     }
 
     private async void CopyBtn_Click(object? sender, RoutedEventArgs e)
@@ -175,6 +265,22 @@ public partial class MainWindow : Window
                     Editor.Text = _vm.JsonText;
                     _updatingFromVm = false;
                     SyncStatus();
+                    
+                    // If JSON is already formatted, show highlighted view
+                    if (_vm.IsJsonFormatted)
+                    {
+                        _isBeautified = true;
+                        Editor.IsVisible = false;
+                        HighlightedViewer.IsVisible = true;
+                        UpdateHighlightedPreview();
+                    }
+                    else
+                    {
+                        _isBeautified = false;
+                        Editor.IsVisible = true;
+                        HighlightedViewer.IsVisible = false;
+                    }
+                    
                     _ = _vm.ShowNotificationAsync($"Imported: {files[0].Name}", true);
                 }
                 else _ = _vm.ShowNotificationAsync($"Import failed: {result}", false);

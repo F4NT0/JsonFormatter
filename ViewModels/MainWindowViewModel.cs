@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -100,13 +101,15 @@ public class MainWindowViewModel : INotifyPropertyChanged
 
             var oneLine = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions
             {
-                WriteIndented = false
+                WriteIndented = false,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
             });
             OneLineJson = oneLine;
 
             var beautified = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions
             {
-                WriteIndented = true
+                WriteIndented = true,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
             });
             IsJsonFormatted = IsAlreadyBeautified(beautified, _jsonText);
         }
@@ -159,7 +162,8 @@ public class MainWindowViewModel : INotifyPropertyChanged
             using var doc = JsonDocument.Parse(_jsonText);
             var beautified = JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions
             {
-                WriteIndented = true
+                WriteIndented = true,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
             });
             _jsonText = beautified;
             OnPropertyChanged(nameof(JsonText));

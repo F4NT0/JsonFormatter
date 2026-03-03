@@ -8,6 +8,7 @@
     <Application.Resources>
         <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
         <converters:BoolToCheckConverter x:Key="BoolToCheckConverter"/>
+        <FontFamily x:Key="NerdFont">avares://JsonFormatter/Assets/Fonts#JetBrainsMono Nerd Font</FontFamily>
     </Application.Resources>
 
     <Application.Styles>

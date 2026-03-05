@@ -79,9 +79,30 @@
 
                     <!-- Header -->
                     <Border Grid.Row="0" Background="#1E2030" CornerRadius="8,8,0,0" Padding="12,8">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="JSON Editor" Foreground="#6272A4" FontSize="12" VerticalAlignment="Center"/>
-                        </StackPanel>
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <TextBlock Grid.Column="0" Text="JSON Editor" Foreground="#6272A4" FontSize="12" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <TextBox x:Name="SearchBox"
+                                     Grid.Column="1"
+                                     Watermark="Search in JSON..."
+                                     Background="#13152A"
+                                     Foreground="#CDD6F4"
+                                     BorderBrush="#44475A"
+                                     BorderThickness="1"
+                                     CornerRadius="4"
+                                     FontSize="12"
+                                     Padding="8,4"
+                                     VerticalAlignment="Center"
+                                     FontFamily="avares://JsonFormatter/Assets/Fonts#JetBrainsMono Nerd Font,Cascadia Code,Consolas,monospace"
+                                     CaretBrush="#CDD6F4"/>
+                            <TextBlock x:Name="SearchStatusIcon"
+                                       Grid.Column="2"
+                                       FontSize="18" Width="26" Height="26"
+                                       HorizontalAlignment="Center" TextAlignment="Center"
+                                       Padding="2" VerticalAlignment="Center"
+                                       Margin="8,0,0,0"
+                                       IsVisible="False"
+                                       FontFamily="avares://JsonFormatter/Assets/Fonts#JetBrainsMono Nerd Font,Segoe UI,sans-serif"/>
+                        </Grid>
                     </Border>
 
                     <!-- Editor: TextBox for input, TextBlock for highlighted output -->
@@ -112,12 +133,24 @@
                                       VerticalAlignment="Stretch"
                                       Background="#13152A"
                                       IsVisible="False">
-                            <TextBlock x:Name="HighlightedText"
-                                       Foreground="#CDD6F4"
-                                       FontFamily="avares://JsonFormatter/Assets/Fonts#JetBrainsMono Nerd Font,Cascadia Code,Consolas,monospace"
-                                       FontSize="14"
-                                       TextWrapping="NoWrap"
-                                       Padding="10,8"/>
+                            <Grid ColumnDefinitions="Auto,*">
+                                <TextBlock x:Name="LineNumbersText"
+                                           Grid.Column="0"
+                                           Foreground="#4E5568"
+                                           FontFamily="avares://JsonFormatter/Assets/Fonts#JetBrainsMono Nerd Font,Cascadia Code,Consolas,monospace"
+                                           FontSize="14"
+                                           TextWrapping="NoWrap"
+                                           TextAlignment="Right"
+                                           Padding="10,8,10,8"
+                                           Background="#13152A"/>
+                                <TextBlock x:Name="HighlightedText"
+                                           Grid.Column="1"
+                                           Foreground="#CDD6F4"
+                                           FontFamily="avares://JsonFormatter/Assets/Fonts#JetBrainsMono Nerd Font,Cascadia Code,Consolas,monospace"
+                                           FontSize="14"
+                                           TextWrapping="NoWrap"
+                                           Padding="0,8,10,8"/>
+                            </Grid>
                         </ScrollViewer>
                     </Grid>
 
@@ -233,6 +266,7 @@
                 <TextBlock Grid.Column="0" Text="Paste or Import JSON → Beautify → Copy"
                            Foreground="#6272A4" FontSize="12" VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button x:Name="EditBtn" Classes="action-btn" Content="✎ Edit" Click="EditBtn_Click" IsVisible="False"/>
                     <Button Classes="beautify-btn" Content="✦ Beautify" Click="BeautifyBtn_Click"/>
                     <Button Classes="action-btn"   Content="⎘ Copy"    Click="CopyBtn_Click"/>
                     <Button Classes="action-btn"   Content="✕ Clear"   Click="ClearBtn_Click"/>

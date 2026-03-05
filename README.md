@@ -16,6 +16,9 @@ A desktop application for formatting, validating, and working with JSON data, bu
 - **Clear** — resets the editor and all status indicators
 - **Export** — saves the current editor content to a `.json` file
 - **Status indicators** — `JSON COMPLIANT` and `JSON FORMATTED` update live as you type or import
+- **Line numbers** — formatted view now shows line numbers alongside the highlighted JSON
+- **Search bar** — search inside the formatted JSON; hits are highlighted and the status icon shows ✔/✘
+- **Edit toggle** — after Beautify you can click **✎ Edit** to return to the editable view with the beautified JSON
 
 ---
 
@@ -63,6 +66,7 @@ In the example below, a minified (single-line) JSON was pasted. Notice:
 After clicking **✦ Beautify**, the JSON is reformatted with proper indentation in place. Notice:
 - **(1)** **✓ JSON COMPLIANT** — the JSON structure is valid
 - **(2)** **✓ JSON FORMATTED** — the JSON now follows the standard indentation format
+- **(3)** Line numbers appear on the left of the formatted/highlighted view
 
 The One-Line Version panel on the right also shows the compact single-line version.
 
@@ -89,6 +93,21 @@ The **One-Line Version** panel on the right always shows a compact minified vers
 - **(2)** A green confirmation **"One-line JSON copied!"** notification appears briefly
 
 ![Copy One-Line](docs/images/copy-json-oneline.png)
+
+---
+
+### 7. Searching Inside the Formatted JSON
+
+- Type in the **Search in JSON...** box (header of the editor) while in the beautified view.
+- Matches are highlighted in **orange**; the search status icon shows **✔** (found) or **✘** (not found).
+
+---
+
+### 8. Editing After Beautify
+
+- After you click **✦ Beautify**, the toolbar shows **✎ Edit**.
+- Click **✎ Edit** to return to the editable `TextBox` with the beautified JSON content preserved.
+- You can beautify again at any time.
 
 ---
 

@@ -6,6 +6,8 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using JsonFormatter.ViewModels;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -29,7 +31,13 @@ public partial class MainWindow : Window
     private void OnWindowLoaded(object? sender, RoutedEventArgs e)
     {
         Editor.TextChanged += Editor_TextChanged;
+        SearchBox.TextChanged += SearchBox_TextChanged;
         SyncStatus();
+    }
+
+    private void SearchBox_TextChanged(object? sender, TextChangedEventArgs e)
+    {
+        UpdateHighlightedPreview();
     }
 
     private void Editor_TextChanged(object? sender, TextChangedEventArgs e)
@@ -105,64 +113,95 @@ public partial class MainWindow : Window
         if (!_vm.IsJsonValid || string.IsNullOrWhiteSpace(_vm.JsonText))
         {
             HighlightedText.Inlines.Clear();
+            LineNumbersText.Text = string.Empty;
             return;
         }
 
         var json = _vm.JsonText;
         HighlightedText.Inlines.Clear();
-        
-        // Simple regex-based highlighting
+
+        var lineCount = json.Split('\n').Length;
+        LineNumbersText.Text = string.Join("\n", Enumerable.Range(1, lineCount));
+
+        var searchTerm = SearchBox?.Text ?? string.Empty;
+        bool hasSearch = !string.IsNullOrEmpty(searchTerm);
+        bool searchFound = false;
+
+        // Build list of syntax-colored spans for the whole JSON
         var pattern = @"(""(?:[^""\\]|\\.)*"")|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|(true|false|null)|([{}\[\],:])";
         var regex = new Regex(pattern);
-        
+
+        // Collect segments: (start, length, syntaxColor)
+        var segments = new List<(int start, int length, string color)>();
         int lastPos = 0;
         foreach (Match match in regex.Matches(json))
         {
-            // Add text before this match (default color)
             if (match.Index > lastPos)
-            {
-                var plainText = json.Substring(lastPos, match.Index - lastPos);
-                HighlightedText.Inlines.Add(new Run { Text = plainText, Foreground = new SolidColorBrush(Color.Parse("#CDD6F4")) });
-            }
-            
-            // Add highlighted match
+                segments.Add((lastPos, match.Index - lastPos, "#CDD6F4"));
+
             var value = match.Value;
-            SolidColorBrush brush;
+            string color;
             if (value.StartsWith("\"") && value.EndsWith("\""))
-            {
-                // String - yellow
-                brush = new SolidColorBrush(Color.Parse("#F1FA8C"));
-            }
+                color = "#F1FA8C";
             else if (Regex.IsMatch(value, @"^-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$"))
-            {
-                // Number - purple
-                brush = new SolidColorBrush(Color.Parse("#BD93F9"));
-            }
+                color = "#BD93F9";
             else if (value is "true" or "false" or "null")
-            {
-                // Boolean/null - red
-                brush = new SolidColorBrush(Color.Parse("#FF5555"));
-            }
+                color = "#FF5555";
             else if (value is "{" or "}" or "[" or "]")
-            {
-                // Brackets - light blue
-                brush = new SolidColorBrush(Color.Parse("#8BE9FD"));
-            }
-            else // comma or colon
-            {
-                // Comma/colon - white
-                brush = new SolidColorBrush(Color.Parse("#FFFFFF"));
-            }
-            
-            HighlightedText.Inlines.Add(new Run { Text = value, Foreground = brush });
+                color = "#8BE9FD";
+            else
+                color = "#FFFFFF";
+
+            segments.Add((match.Index, match.Length, color));
             lastPos = match.Index + match.Length;
         }
-        
-        // Add remaining text
         if (lastPos < json.Length)
+            segments.Add((lastPos, json.Length - lastPos, "#CDD6F4"));
+
+        // Render segments, splitting by search term when present
+        foreach (var (start, length, color) in segments)
         {
-            var plainText = json.Substring(lastPos);
-            HighlightedText.Inlines.Add(new Run { Text = plainText, Foreground = new SolidColorBrush(Color.Parse("#CDD6F4")) });
+            var text = json.Substring(start, length);
+            if (hasSearch)
+            {
+                int idx = 0;
+                while (idx < text.Length)
+                {
+                    int found = text.IndexOf(searchTerm, idx, StringComparison.OrdinalIgnoreCase);
+                    if (found < 0)
+                    {
+                        HighlightedText.Inlines.Add(new Run { Text = text.Substring(idx), Foreground = new SolidColorBrush(Color.Parse(color)) });
+                        break;
+                    }
+                    searchFound = true;
+                    if (found > idx)
+                        HighlightedText.Inlines.Add(new Run { Text = text.Substring(idx, found - idx), Foreground = new SolidColorBrush(Color.Parse(color)) });
+                    // Search match: orange background simulation via bold orange foreground
+                    HighlightedText.Inlines.Add(new Run
+                    {
+                        Text = text.Substring(found, searchTerm.Length),
+                        Foreground = new SolidColorBrush(Color.Parse("#FF9900")),
+                        FontWeight = Avalonia.Media.FontWeight.Bold
+                    });
+                    idx = found + searchTerm.Length;
+                }
+            }
+            else
+            {
+                HighlightedText.Inlines.Add(new Run { Text = text, Foreground = new SolidColorBrush(Color.Parse(color)) });
+            }
+        }
+
+        // Update search status icon
+        if (hasSearch)
+        {
+            SearchStatusIcon.IsVisible = true;
+            SearchStatusIcon.Text = searchFound ? "\uF05D" : "\uF52F";
+            SearchStatusIcon.Foreground = new SolidColorBrush(Color.Parse(searchFound ? "#50FA7B" : "#FF5555"));
+        }
+        else
+        {
+            SearchStatusIcon.IsVisible = false;
         }
     }
 
@@ -196,9 +235,20 @@ public partial class MainWindow : Window
         _isBeautified = true;
         Editor.IsVisible = false;
         HighlightedViewer.IsVisible = true;
+        EditBtn.IsVisible = true;
         UpdateHighlightedPreview();
         
         _ = _vm.ShowNotificationAsync("JSON beautified!", true);
+    }
+
+    private void EditBtn_Click(object? sender, RoutedEventArgs e)
+    {
+        _isBeautified = false;
+        Editor.IsVisible = true;
+        HighlightedViewer.IsVisible = false;
+        EditBtn.IsVisible = false;
+        SearchStatusIcon.IsVisible = false;
+        Editor.Focus();
     }
 
     private void ClearBtn_Click(object? sender, RoutedEventArgs e)
@@ -213,6 +263,7 @@ public partial class MainWindow : Window
         _isBeautified = false;
         Editor.IsVisible = true;
         HighlightedViewer.IsVisible = false;
+        EditBtn.IsVisible = false;
         HighlightedText.Text = "";
     }
 

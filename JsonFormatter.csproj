@@ -6,10 +6,13 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationIcon>Assets\Icons\app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\Fonts\JetBrainsMonoNerdFont-Light.ttf"/>
+    <AvaloniaResource Include="Assets\Icons\logo.png"/>
+    <AvaloniaResource Include="Assets\Icons\app.ico"/>
   </ItemGroup>
 
   <ItemGroup>

@@ -1,6 +1,12 @@
-# JSON Formatter — Fanto Edition
+<div align="center">
 
-A desktop application for formatting, validating, and working with JSON data, built with **.NET 10** and **Avalonia UI**.
+# JSON Formatter
+
+<img width="200" height="200" alt="logo" src="https://github.com/user-attachments/assets/981a8f7b-8351-4172-a04e-599ddd78c765" />
+
+### A desktop application for formatting, validating, and working with JSON data
+
+</div>
 
 ---
 
